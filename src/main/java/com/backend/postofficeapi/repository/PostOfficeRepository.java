@@ -10,7 +10,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.backend.postofficeapi.entities.PostOffice;
-import com.backend.postofficeapi.model.CircleResponse;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,10 +17,7 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface PostOfficeRepository extends JpaRepository<PostOffice, Long>, JpaSpecificationExecutor<PostOffice> {
 
-    List<PostOffice> findByPincodeAndDeliveryStatus(String pincode, String deliveryStatus);
-
-    // List<PostOffice> findByCircleNameAndRegionNameAndDivisionName(String
-    // circleName, String regionName, String divisionName);
+    List<PostOffice> findByPincodeAndDeliveryStatus(Integer pincode, String deliveryStatus);
 
     default Page<PostOffice> findByCircleNameAndRegionNameAndDivisionName(String circleName, String regionName,
             String divisionName, Pageable pageable) {

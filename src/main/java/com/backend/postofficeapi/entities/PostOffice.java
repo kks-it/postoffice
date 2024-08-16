@@ -4,8 +4,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 public class PostOffice {
@@ -17,9 +18,9 @@ public class PostOffice {
     @NotBlank(message = "Post Office name is mandatory")
     private String officeName;
 
-    @NotBlank(message = "Pincode is mandatory")
-    @Pattern(regexp = "\\d{6}", message = "Pincode must be a 6-digit number")
-    private String pincode;
+    @NotNull
+    @Max(value = 999999, message = "Pin code cannot have more than 6 digits")
+    private Integer pincode;
 
     private String officeType;
 
@@ -47,7 +48,6 @@ public class PostOffice {
 
     private String latitude;
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -64,11 +64,11 @@ public class PostOffice {
         this.officeName = officeName;
     }
 
-    public String getPincode() {
+    public Integer getPincode() {
         return pincode;
     }
 
-    public void setPincode(String pincode) {
+    public void setPincode(Integer pincode) {
         this.pincode = pincode;
     }
 

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.backend.postofficeapi.entities.PostOffice;
+import com.backend.postofficeapi.model.ErrorResponse;
 import com.backend.postofficeapi.service.PostOfficeService;
 
 @RestController
@@ -48,7 +49,7 @@ public class PostOfficeController {
     }
 
     @GetMapping("/{pincode}")
-    public ResponseEntity<List<PostOffice>> getPostOfficesByPincode(@PathVariable String pincode) {
+    public ResponseEntity<List<PostOffice>> getPostOfficesByPincode(@PathVariable Integer pincode) {
         List<PostOffice> postOffices = postOfficeService.getPostOfficesByPincode(pincode);
         if (postOffices.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -92,20 +93,4 @@ public class PostOfficeController {
     }
 }
 
-class ErrorResponse {
-    private String message;
-    private String description;
 
-    public ErrorResponse(String message, String description) {
-        this.message = message;
-        this.description = description;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-}

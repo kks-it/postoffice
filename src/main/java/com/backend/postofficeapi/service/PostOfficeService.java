@@ -7,18 +7,15 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.geo.Circle;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,14 +44,14 @@ public class PostOfficeService {
 
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 byte[] chunk = Arrays.copyOfRange(buffer, 0, bytesRead);
-                processChunk(chunk, executorService);
+                processChunk(chunk);
             }
         }
     }
 
-    private void processChunk(byte[] chunk, ExecutorService executorService) throws IOException {
+    void processChunk(byte[] chunk) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(chunk))) {
-            CSVParser parser = new CSVParser(reader, CSVFormat.DEFAULT.builder()
+            try (CSVParser parser = new CSVParser(reader, CSVFormat.DEFAULT.builder()
                     .setHeader("officename", "pincode", "officeType", "Deliverystatus", "divisionname", "regionname",
                             "circlename", "Taluk", "Districtname", "statename", "Telephone", "Related Suboffice",
                             "Related Headoffice", "longitude", "latitude")
@@ -62,18 +59,17 @@ public class PostOfficeService {
                     .setIgnoreHeaderCase(true)
                     .setTrim(true)
                     .setRecordSeparator("\r\n")
-                    .build());
-
-            for (CSVRecord csvRecord : parser) {
-                executorService.submit(() -> {
-                    try {
-                        // Process your CSV record here
-                        PostOffice record = processPostOfficeCsv(csvRecord);
-                        postOfficeRepository.save(record);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                });
+                    .build())) {
+                for (CSVRecord csvRecord : parser) {
+                    executorService.submit(() -> {
+                        try {
+                            PostOffice record = processPostOfficeCsv(csvRecord);
+                            postOfficeRepository.save(record);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    });
+                }
             }
         }
     }
@@ -81,40 +77,36 @@ public class PostOfficeService {
     private PostOffice processPostOfficeCsv(CSVRecord csvRecord) {
         PostOffice postOffice = new PostOffice();
         postOffice.setOfficeName(csvRecord.get("officename"));
-        postOffice.setPincode(csvRecord.get("pincode"));
+        postOffice.setPincode(Integer.parseInt(csvRecord.get("pincode")));
         postOffice.setOfficeType(csvRecord.get("officeType"));
         postOffice.setDeliveryStatus(csvRecord.get("DeliveryStatus"));
         postOffice.setDivisionName(csvRecord.get("divisionname"));
         postOffice.setRegionName(csvRecord.get("regionname"));
         postOffice.setCircleName(csvRecord.get("circlename"));
-        if ("NA".equals(csvRecord.get("Taluk"))) {
+        if (!"NA".equals(csvRecord.get("Taluk"))) {
             postOffice.setTaluk(csvRecord.get("Taluk"));
         }
         postOffice.setDistrictName(csvRecord.get("Districtname"));
         postOffice.setStateName(csvRecord.get("statename"));
-        if ("NA".equals(csvRecord.get("Telephone"))) {
+        if (!"NA".equals(csvRecord.get("Telephone"))) {
             postOffice.setTelephone(csvRecord.get("Telephone"));
         }
-        if ("NA".equals(csvRecord.get("Related Suboffice"))) {
+        if (!"NA".equals(csvRecord.get("Related Suboffice"))) {
             postOffice.setRelatedSuboffice(csvRecord.get("Related Suboffice"));
         }
-        if ("NA".equals(csvRecord.get("Related Headoffice"))) {
+        if (!"NA".equals(csvRecord.get("Related Headoffice"))) {
             postOffice.setRelatedHeadoffice(csvRecord.get("Related Headoffice"));
         }
-        if ("NA".equals(csvRecord.get("longitude"))) {
+        if (!"NA".equals(csvRecord.get("longitude"))) {
             postOffice.setLongitude(csvRecord.get("longitude"));
         }
-        if ("NA".equals(csvRecord.get("latitude"))) {
+        if (!"NA".equals(csvRecord.get("latitude"))) {
             postOffice.setLatitude(csvRecord.get("latitude"));
         }
         return postOffice;
     }
 
-    public void savePostOffice(PostOffice postOffice) {
-        postOfficeRepository.save(postOffice);
-    }
-
-    public List<PostOffice> getPostOfficesByPincode(String pincode) {
+    public List<PostOffice> getPostOfficesByPincode(Integer pincode) {
         return postOfficeRepository.findByPincodeAndDeliveryStatus(pincode, "Delivery");
     }
 
@@ -125,43 +117,6 @@ public class PostOfficeService {
                 regionName, divisionName, pageRequest);
         return postOfficePage.getContent();
     }
-
-    // public List<CircleResponse> getCircles(String circleName, int pageNo, int pageSize) {
-    //     List<CircleResponse> circleResponses = new ArrayList<>();
-
-    //     List<String> circles = postOfficeRepository.findDistinctCircleNames();
-
-    //     for (String circle : circles) {
-    //         CircleResponse circleResponse = new CircleResponse();
-    //         circleResponse.setCircleName(circle);
-
-    //         List<RegionResponse> regions = new ArrayList<>();
-    //         List<String> regionNames = postOfficeRepository.findDistinctRegionNameByCircleName(circle);
-
-    //         for (String region : regionNames) {
-    //             RegionResponse regionResponse = new RegionResponse();
-    //             regionResponse.setRegionName(region);
-
-    //             List<DivisionResponse> divisions = new ArrayList<>();
-    //             List<String> divisionNames = postOfficeRepository
-    //                     .findDistinctDivisionNameByCircleNameAndRegionName(circle, region);
-
-    //             for (String division : divisionNames) {
-    //                 DivisionResponse divisionResponse = new DivisionResponse();
-    //                 divisionResponse.setDivisionName(division);
-    //                 divisions.add(divisionResponse);
-    //             }
-    //             regionResponse.setDivisions(divisions);
-    //             regions.add(regionResponse);
-    //         }
-    //         circleResponse.setRegions(regions);
-    //         circleResponses.add(circleResponse);
-    //     }
-
-    //     return circleResponses;
-    // }
-
-   
 
     public Map<String, Object> getCircles(String circleName, int pageNo, int pageSize) {
         PageRequest pageable = PageRequest.of(pageNo, pageSize);
@@ -174,16 +129,17 @@ public class PostOfficeService {
             String regionName = (String) row[1];
             String divisionName = (String) row[2];
 
-            CircleResponse circleDto = circlesMap.computeIfAbsent(circleNameResult, name -> new CircleResponse(name, new ArrayList<>()));
+            CircleResponse circleDto = circlesMap.computeIfAbsent(circleNameResult,
+                    name -> new CircleResponse(name, new ArrayList<>()));
 
             RegionResponse regionDto = circleDto.getRegions().stream()
-                .filter(r -> r.getRegionName().equals(regionName))
-                .findFirst()
-                .orElseGet(() -> {
-                    RegionResponse newRegion = new RegionResponse(regionName, new ArrayList<>());
-                    circleDto.getRegions().add(newRegion);
-                    return newRegion;
-                });
+                    .filter(r -> r.getRegionName().equals(regionName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        RegionResponse newRegion = new RegionResponse(regionName, new ArrayList<>());
+                        circleDto.getRegions().add(newRegion);
+                        return newRegion;
+                    });
 
             if (regionDto.getDivisions().stream().noneMatch(d -> d.getDivisionName().equals(divisionName))) {
                 regionDto.getDivisions().add(new DivisionResponse(divisionName));
@@ -198,25 +154,25 @@ public class PostOfficeService {
 
         return response;
     }
-   
+
     public Map<String, Object> getRegions(String regionName, int pageNo, int pageSize) {
         PageRequest pageable = PageRequest.of(pageNo, pageSize);
         List<Object[]> rawData = postOfficeRepository.findRegions(regionName, pageable);
-        
+
         Map<String, RegionResponse> regionsMap = new HashMap<>();
 
         for (Object[] row : rawData) {
             String regionNameResult = (String) row[0];
             String divisionName = (String) row[1];
 
-            RegionResponse regionDto = regionsMap.computeIfAbsent(regionNameResult, name -> new RegionResponse(name, new ArrayList<>()));
+            RegionResponse regionDto = regionsMap.computeIfAbsent(regionNameResult,
+                    name -> new RegionResponse(name, new ArrayList<>()));
 
             if (regionDto.getDivisions().stream().noneMatch(d -> d.getDivisionName().equals(divisionName))) {
                 regionDto.getDivisions().add(new DivisionResponse(divisionName));
             }
         }
 
-        
         Map<String, Object> response = new HashMap<>();
         response.put("regions", new ArrayList<>(regionsMap.values()));
         response.put("page", pageNo);
